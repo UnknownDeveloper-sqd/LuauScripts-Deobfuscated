@@ -3,7 +3,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Dark Hub | Chain | V1.3",
+    Title = "Dark Hub | Chain | Version 1.4 | Halloween",
     SubTitle = "By Frosty",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -99,7 +99,7 @@ task.spawn(function()
 end)
 
 -- ==========================================================
--- B1A2A5B7A5AdA8A5 AfAe A1AeAaA0Ac GUI
+-- i7h2h5j3h5i3h8h5 i5i4 h1i4i0h0i2 GUI
 -- ==========================================================
 task.spawn(function()
     task.wait(1.2)
@@ -576,7 +576,7 @@ ScrapESPToggle:OnChanged(function()
 end)
 ScrapESPToggle:SetValue(false)
 
--- BEARTRAP ESP (C1C5CbDbC9)
+-- BEARTRAP ESP (k3k7l3m9l1)
 local BearTrapESPToggle = Tabs.Visual:AddToggle("BearTrapESP", { Title = "BearTrap Esp", Default = false })
 
 local bearTrapFolder = workspace:WaitForChild("GameStuff"):WaitForChild("PlayerStuff"):WaitForChild("BearTraps")
@@ -683,6 +683,114 @@ BearTrapESPToggle:OnChanged(function()
     end
 end)
 BearTrapESPToggle:SetValue(false)
+
+-- ARTIFACT ESP (m0n5l4l5l6-l9l0l5l0l1)
+local ArtifactESPToggle = Tabs.Visual:AddToggle("ArtifactESP", { Title = "Artifact Esp", Default = false })
+
+local artifactFolder = workspace:WaitForChild("Misc"):WaitForChild("Zones"):WaitForChild("LootingItems"):WaitForChild("Artifacts")
+
+local artifactRunning = false
+local artifactLabels = {}
+local artifactHighlights = {}
+local artifactConns = {}
+local artifactGui
+local darkBlue = Color3.fromRGB(0, 40, 130)
+
+local function removeArtifact(artifact)
+    if artifactLabels[artifact] then artifactLabels[artifact]:Destroy() artifactLabels[artifact] = nil end
+    if artifactHighlights[artifact] then artifactHighlights[artifact]:Destroy() artifactHighlights[artifact] = nil end
+end
+
+local function addArtifact(artifact)
+    if not artifactRunning or artifactLabels[artifact] then return end
+    if not artifact:IsA("Model") then return end
+
+    local part = artifact.PrimaryPart or artifact:FindFirstChildWhichIsA("BasePart", true)
+    if not part then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = darkBlue
+    highlight.OutlineColor = darkBlue
+    highlight.FillTransparency = 0.45
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = artifact
+    highlight.Enabled = false
+    highlight.Parent = artifact
+    artifactHighlights[artifact] = highlight
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 120, 0, 35)
+    label.AnchorPoint = Vector2.new(0.5, 0.5)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = darkBlue
+    label.TextStrokeTransparency = 0
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 13
+    label.Visible = false
+    label.Parent = artifactGui
+    artifactLabels[artifact] = label
+end
+
+ArtifactESPToggle:OnChanged(function()
+    if ArtifactESPToggle.Value then
+        if artifactRunning then return end
+        artifactRunning = true
+        artifactGui = Instance.new("ScreenGui")
+        artifactGui.IgnoreGuiInset = true
+        artifactGui.DisplayOrder = 10
+        artifactGui.Parent = CoreGui
+
+        for _, artifact in ipairs(artifactFolder:GetChildren()) do addArtifact(artifact) end
+
+        artifactConns.added = artifactFolder.ChildAdded:Connect(function(artifact)
+            task.defer(function() if artifactRunning then addArtifact(artifact) end end)
+        end)
+        artifactConns.removed = artifactFolder.ChildRemoved:Connect(function(artifact) removeArtifact(artifact) end)
+
+        artifactConns.render = RunService.RenderStepped:Connect(function()
+            if not artifactRunning then return end
+            local character = Players.LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            local camera = workspace.CurrentCamera
+            if not root or not camera then return end
+
+            for artifact, label in pairs(artifactLabels) do
+                if not artifact.Parent then removeArtifact(artifact) continue end
+                local highlight = artifactHighlights[artifact]
+                local part = artifact.PrimaryPart or artifact:FindFirstChildWhichIsA("BasePart", true)
+                if not part then
+                    label.Visible = false
+                    if highlight then highlight.Enabled = false end
+                    continue
+                end
+
+                local pos, visible = camera:WorldToViewportPoint(part.Position)
+                if visible then
+                    local dist = math.floor((root.Position - part.Position).Magnitude + 0.5)
+                    label.Text = "Artifact\n" .. dist .. " studs"
+                    label.Position = UDim2.fromOffset(pos.X, pos.Y)
+                    label.Visible = true
+                    if highlight then highlight.Enabled = true end
+                else
+                    label.Visible = false
+                    if highlight then highlight.Enabled = false end
+                end
+            end
+        end)
+    else
+        artifactRunning = false
+        for _, c in pairs(artifactConns) do
+            if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+        end
+        table.clear(artifactConns)
+        for artifact, _ in pairs(artifactLabels) do removeArtifact(artifact) end
+        table.clear(artifactLabels)
+        table.clear(artifactHighlights)
+        if artifactGui then artifactGui:Destroy() artifactGui = nil end
+    end
+end)
+ArtifactESPToggle:SetValue(false)
 
 Tabs.Visual:AddParagraph({ Title = "Camera", Content = "" })
 
@@ -1276,6 +1384,115 @@ do
     end)
 end
 
+-- AUTO DODGE
+local AutoDodgeToggle = Tabs.Combat:AddToggle("AutoDodge", { Title = "Auto Dodge", Default = false })
+
+do
+    local autoDodgeEnabled = false
+    local dodgeDistance = 15
+
+    -- h0l5l0l4k2m4l0l0 k2m0k2l2 CHAIN, l6m0 l2l6m0l6l8m9m3 l5m1k8l5l6 m1l2l3l6l5n3m0n0l9n3
+    local DANGER_ANIMS = {
+        ["rbxassetid://131931231828130"] = { delay = 0.3 },
+        ["rbxassetid://95858548841780"] = { delay = 0 },
+        ["rbxassetid://101884994488773"] = { delay = 0 },
+        ["rbxassetid://78440647847406"] = { delay = 0 },
+        ["rbxassetid://88813113168837"] = { delay = 0 },
+    }
+
+    local VIM = game:GetService("VirtualInputManager")
+
+    local function getDistanceTo(pos)
+        local char = Players.LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return math.huge end
+        return (pos - hrp.Position).Magnitude
+    end
+
+    local function doDodge()
+        task.wait(math.random(30, 60) / 1000)
+        pcall(function()
+            VIM:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+            task.wait(0.1)
+            VIM:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+        end)
+    end
+
+    local activeConns = {}
+
+    local function clearConns()
+        for _, c in ipairs(activeConns) do
+            pcall(function() c:Disconnect() end)
+        end
+        table.clear(activeConns)
+    end
+
+    local function watchChain()
+        local misc = workspace:FindFirstChild("Misc")
+        local ai = misc and misc:FindFirstChild("AI")
+        if not ai then
+            task.wait(1)
+            if autoDodgeEnabled then watchChain() end
+            return
+        end
+
+        for _, child in ipairs(ai:GetChildren()) do
+            if child.Name == "CHAIN" or string.find(string.lower(child.Name), "chain") then
+                local humanoid = child:FindFirstChildOfClass("Humanoid")
+                local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+                if animator then
+                    table.insert(activeConns, animator.AnimationPlayed:Connect(function(track)
+                        if not autoDodgeEnabled then return end
+                        local anim = track.Animation
+                        if not anim then return end
+                        local data = DANGER_ANIMS[anim.AnimationId]
+                        if not data then return end
+
+                        local isPlaying = true
+                        local stopConn
+                        stopConn = track.Stopped:Connect(function()
+                            isPlaying = false
+                            if stopConn then stopConn:Disconnect() end
+                        end)
+
+                        task.spawn(function()
+                            while isPlaying and autoDodgeEnabled do
+                                local hrp = child:FindFirstChild("HumanoidRootPart")
+                                if hrp then
+                                    local dist = getDistanceTo(hrp.Position)
+                                    if dist <= dodgeDistance then
+                                        task.wait(data.delay or 0)
+                                        doDodge()
+                                        break
+                                    end
+                                end
+                                RunService.Heartbeat:Wait()
+                            end
+                            isPlaying = false
+                        end)
+                    end))
+                end
+            end
+        end
+
+        table.insert(activeConns, ai.ChildAdded:Connect(function(child)
+            if autoDodgeEnabled then
+                task.defer(watchChain)
+            end
+        end))
+    end
+
+    AutoDodgeToggle:OnChanged(function()
+        clearConns()
+        autoDodgeEnabled = AutoDodgeToggle.Value == true
+        if autoDodgeEnabled then
+            task.spawn(watchChain)
+        end
+    end)
+
+    AutoDodgeToggle:SetValue(false)
+end
+
 Tabs.Combat:AddParagraph({ Title = "Increase", Content = "" })
 
 local StaminaToggle = Tabs.Combat:AddToggle("Stamina", { Title = "Infinite Stamina", Default = false })
@@ -1404,10 +1621,15 @@ local XSawGasToggle = Tabs.Combat:AddToggle("XSawGas", { Title = "Infinite XSaw 
 XSawGasToggle:OnChanged(function()
     if XSawGasToggle.Value then
         getgenv().StopXSawGas = false
-        local xsaw = workspace:WaitForChild(Players.LocalPlayer.Name):WaitForChild("Items"):WaitForChild("XSaw")
+        local lp = Players.LocalPlayer
         task.spawn(function()
-            while xsaw.Parent and not getgenv().StopXSawGas do
-                xsaw:SetAttribute("Gas", 100)
+            while not getgenv().StopXSawGas do
+                local char = lp.Character
+                local items = char and char:FindFirstChild("Items")
+                local xsaw = items and items:FindFirstChild("XSaw")
+                if xsaw then
+                    xsaw:SetAttribute("Gas", 100)
+                end
                 task.wait()
             end
         end)
@@ -1502,6 +1724,180 @@ end
 ChainDamageEnabled = false
 
 Tabs.Item:AddParagraph({ Title = "Give", Content = "" })
+
+Tabs.Item:AddButton({
+    Title = "Give BearTrap",
+    Callback = function()
+        Window:Dialog({
+            Title = "Item Give",
+            Content = "Give BearTrap?",
+            Buttons = {
+                { Title = "Confirm", Callback = function()
+                    local RS = game:GetService("ReplicatedStorage")
+                    local LP = Players.LocalPlayer
+                    local ing = LP.PlayerGui:FindFirstChild("Ingame")
+                    local inv = ing and ing:FindFirstChild("Inventory")
+                    if not ing or not inv then return end
+
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then
+                            local v = c:FindFirstChild("Values")
+                            local n = v and v:FindFirstChild("ItemName")
+                            if n and n.Value == "BearTrap" then return end
+                        end
+                    end
+
+                    local slots = {}
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then slots[c.Name] = c end
+                    end
+
+                    local free
+                    for _, s in ipairs({"1","2","3","4","5","6","7","8","9","0"}) do
+                        if not slots[s] then free = s break end
+                    end
+                    if not free then return end
+
+                    local contents = ing:FindFirstChild("Contents")
+                    local assets = contents and contents:FindFirstChild("Assets")
+                    local tpl = assets and assets:FindFirstChild("SlotItem")
+                    if not tpl then return end
+
+                    local info = RS.GameStuff.ItemInfo:FindFirstChild("BearTrap")
+                    local iconID = info and info:GetAttribute("IconID") or ""
+
+                    local clone = tpl:Clone()
+                    clone.Name = free
+                    clone.Parent = inv
+                    clone.Values.ItemName.Value = "BearTrap"
+                    clone.Icon.Image = tostring(iconID)
+                    clone.Visible = true
+
+                    local char = LP.Character
+                    local its = char and char:FindFirstChild("Items")
+                    if its then its:SetAttribute("BearTrap", true) end
+                end },
+                { Title = "Cancel", Callback = function() end }
+            }
+        })
+    end
+})
+
+Tabs.Item:AddButton({
+    Title = "Give Medkit",
+    Callback = function()
+        Window:Dialog({
+            Title = "Item Give",
+            Content = "Give Medkit?",
+            Buttons = {
+                { Title = "Confirm", Callback = function()
+                    local RS = game:GetService("ReplicatedStorage")
+                    local LP = Players.LocalPlayer
+                    local ing = LP.PlayerGui:FindFirstChild("Ingame")
+                    local inv = ing and ing:FindFirstChild("Inventory")
+                    if not ing or not inv then return end
+
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then
+                            local v = c:FindFirstChild("Values")
+                            local n = v and v:FindFirstChild("ItemName")
+                            if n and n.Value == "Medkit" then return end
+                        end
+                    end
+
+                    local slots = {}
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then slots[c.Name] = c end
+                    end
+
+                    local free
+                    for _, s in ipairs({"1","2","3","4","5","6","7","8","9","0"}) do
+                        if not slots[s] then free = s break end
+                    end
+                    if not free then return end
+
+                    local contents = ing:FindFirstChild("Contents")
+                    local assets = contents and contents:FindFirstChild("Assets")
+                    local tpl = assets and assets:FindFirstChild("SlotItem")
+                    if not tpl then return end
+
+                    local info = RS.GameStuff.ItemInfo:FindFirstChild("Medkit")
+                    local iconID = info and info:GetAttribute("IconID") or ""
+
+                    local clone = tpl:Clone()
+                    clone.Name = free
+                    clone.Parent = inv
+                    clone.Values.ItemName.Value = "Medkit"
+                    clone.Icon.Image = tostring(iconID)
+                    clone.Visible = true
+
+                    local char = LP.Character
+                    local its = char and char:FindFirstChild("Items")
+                    if its then its:SetAttribute("Medkit", true) end
+                end },
+                { Title = "Cancel", Callback = function() end }
+            }
+        })
+    end
+})
+
+Tabs.Item:AddButton({
+    Title = "Give Energy Drink",
+    Callback = function()
+        Window:Dialog({
+            Title = "Item Give",
+            Content = "Give Energy Drink?",
+            Buttons = {
+                { Title = "Confirm", Callback = function()
+                    local RS = game:GetService("ReplicatedStorage")
+                    local LP = Players.LocalPlayer
+                    local ing = LP.PlayerGui:FindFirstChild("Ingame")
+                    local inv = ing and ing:FindFirstChild("Inventory")
+                    if not ing or not inv then return end
+
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then
+                            local v = c:FindFirstChild("Values")
+                            local n = v and v:FindFirstChild("ItemName")
+                            if n and n.Value == "EnergyDrink" then return end
+                        end
+                    end
+
+                    local slots = {}
+                    for _, c in ipairs(inv:GetChildren()) do
+                        if c:IsA("ImageLabel") then slots[c.Name] = c end
+                    end
+
+                    local free
+                    for _, s in ipairs({"1","2","3","4","5","6","7","8","9","0"}) do
+                        if not slots[s] then free = s break end
+                    end
+                    if not free then return end
+
+                    local contents = ing:FindFirstChild("Contents")
+                    local assets = contents and contents:FindFirstChild("Assets")
+                    local tpl = assets and assets:FindFirstChild("SlotItem")
+                    if not tpl then return end
+
+                    local info = RS.GameStuff.ItemInfo:FindFirstChild("EnergyDrink")
+                    local iconID = info and info:GetAttribute("IconID") or ""
+
+                    local clone = tpl:Clone()
+                    clone.Name = free
+                    clone.Parent = inv
+                    clone.Values.ItemName.Value = "EnergyDrink"
+                    clone.Icon.Image = tostring(iconID)
+                    clone.Visible = true
+
+                    local char = LP.Character
+                    local its = char and char:FindFirstChild("Items")
+                    if its then its:SetAttribute("EnergyDrink", true) end
+                end },
+                { Title = "Cancel", Callback = function() end }
+            }
+        })
+    end
+})
 
 Tabs.Item:AddButton({
     Title = "Give Crucifix",
@@ -2149,6 +2545,32 @@ Tabs.Misc:AddButton({
                 { Title = "Confirm", Callback = function()
                     local s = Players.LocalPlayer:FindFirstChild("PlayerStats")
                     if s then s:SetAttribute("BearTrapPlaced", false) end
+                end },
+                { Title = "Cancel", Callback = function() end }
+            }
+        })
+    end
+})
+
+Tabs.Misc:AddButton({
+    Title = "Unlock Artifact Quest",
+    Callback = function()
+        Window:Dialog({
+            Title = "Artifact Quest",
+            Content = "Unlock Artifact Quest?",
+            Buttons = {
+                { Title = "Confirm", Callback = function()
+                    local LP = Players.LocalPlayer
+                    local playerStats = LP:WaitForChild("PlayerStats")
+                    local quests = playerStats:WaitForChild("Quests")
+
+                    quests:SetAttribute("ArtifactQuest", true)
+
+                    Fluent:Notify({
+                        Title = "Artifact Quest",
+                        Content = "ArtifactQuest set to true.",
+                        Duration = 3
+                    })
                 end },
                 { Title = "Cancel", Callback = function() end }
             }
